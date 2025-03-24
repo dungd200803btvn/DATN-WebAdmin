@@ -1,0 +1,23 @@
+{
+  "name": "notification-scheduler",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "csv-writer": "^1.6.0",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.1.0",
+    "googleapis": "^144.0.0",
+    "ml-distance": "^4.0.1",
+    "node-cron": "^3.0.3",
+    "selenium-webdriver": "^4.29.0",
+    "stripe": "^17.6.0"
+  }
+}
