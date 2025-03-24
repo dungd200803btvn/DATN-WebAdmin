@@ -10,15 +10,11 @@ if (!process.env.GOOGLE_CREDENTIALS) {
 }
 
 try {
-  const rawCredentials = process.env.GOOGLE_CREDENTIALS;
-  // Chuyển đổi các ký tự escaped newline thành ký tự newline thực sự
-  const formattedCredentials = rawCredentials.replace(/\\n/g, '\n');
-  const googleCredentials = JSON.parse(formattedCredentials);
-  console.log("Parsed GOOGLE_CREDENTIALS, private_key:", googleCredentials.private_key);
-
+  
   admin.initializeApp({
-    credential: admin.credential.cert(googleCredentials),
+    credential: admin.credential.cert(JSON.parse(process.env.GOOGLE_CREDENTIALS)),
   });
+  
   console.log("Firebase Admin initialized successfully.");
 } catch (error) {
   console.error("Error initializing Firebase Admin:", error);
