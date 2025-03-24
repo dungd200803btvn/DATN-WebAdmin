@@ -1,11 +1,31 @@
 const express = require('express');
 const admin = require('firebase-admin');
 
-admin.initializeApp({
-  credential: admin.credential.cert(JSON.parse(process.env.GOOGLE_CREDENTIALS)),
-});
+// Kiểm tra sự tồn tại của biến môi trường GOOGLE_CREDENTIALS (không log toàn bộ nội dung để tránh tiết lộ thông tin nhạy cảm)
+if (!process.env.GOOGLE_CREDENTIALS) {
+  console.error("Environment variable GOOGLE_CREDENTIALS is missing!");
+} else {
+  console.log("GOOGLE_CREDENTIALS exists.");
+}
+
+try {
+  // Phân tích JSON từ biến môi trường
+  const googleCredentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+  // Log thông tin cơ bản để xác nhận (chỉ log client_email thay vì toàn bộ key)
+  console.log("Parsed GOOGLE_CREDENTIALS, client_email:", googleCredentials.client_email);
+
+  admin.initializeApp({
+    credential: admin.credential.cert(googleCredentials),
+  });
+  console.log("Firebase Admin initialized successfully.");
+} catch (error) {
+  console.error("Error initializing Firebase Admin:", error);
+}
+
+
 
 const db = admin.firestore();
+console.log("Firestore database connection initialized.");
 const app = express();
 
 // Endpoint trả về top 20 category có nhiều sản phẩm nhất
@@ -13,6 +33,7 @@ app.get('/top-categories', async (req, res) => {
   try {
     // 1. Lấy toàn bộ products
     const productSnapshot = await db.collection('Products').get();
+    console.log(`Retrieved ${productSnapshot.size} products`);
 
     // 2. Đếm số lượng sản phẩm cho mỗi category
     const categoryCount = {};
@@ -57,7 +78,7 @@ app.get('/top-categories', async (req, res) => {
 
     // Sắp xếp lại các category theo số lượng sản phẩm giảm dần
     categories.sort((a, b) => b.productCount - a.productCount);
-
+    console.log("Successfully fetched top categories.");
     res.json({ topCategories: categories });
   } catch (error) {
     console.error("Error retrieving top categories:", error);
