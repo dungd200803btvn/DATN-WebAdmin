@@ -2,7 +2,7 @@ const express = require('express');
 const admin = require('firebase-admin');
 
 admin.initializeApp({
-  credential: admin.credential.cert(require('../service-account.json')),
+  credential: admin.credential.cert(JSON.parse(process.env.GOOGLE_CREDENTIALS)),
 });
 
 const db = admin.firestore();
@@ -104,7 +104,7 @@ app.get('/products-by-category/:categoryId', async (req, res) => {
 });
 
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 10000;
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
