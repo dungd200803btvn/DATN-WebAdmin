@@ -1,0 +1,4 @@
+scipy.sparse
+lightfm
+pandas
+numpy
