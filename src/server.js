@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const admin = require('firebase-admin');
 
@@ -9,16 +10,10 @@ if (!process.env.GOOGLE_CREDENTIALS) {
 }
 
 try {
-  // Phân tích JSON từ biến môi trường
-  // Chuyển đổi các ký tự escaped newline thành ký tự newline thực sự
-
   const rawCredentials = process.env.GOOGLE_CREDENTIALS;
+  // Chuyển đổi các ký tự escaped newline thành ký tự newline thực sự
   const formattedCredentials = rawCredentials.replace(/\\n/g, '\n');
-  console.log("CREDENTIAL TRUOC private_key:", JSON.parse(rawCredentials).private_key);
   const googleCredentials = JSON.parse(formattedCredentials);
-
-  // const googleCredentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
-  // Log thông tin cơ bản để xác nhận (chỉ log client_email thay vì toàn bộ key)
   console.log("Parsed GOOGLE_CREDENTIALS, private_key:", googleCredentials.private_key);
 
   admin.initializeApp({
