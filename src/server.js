@@ -84,6 +84,111 @@ app.get('/top-categories', async (req, res) => {
   }
 });
 
+
+// Lấy top brands theo giới hạn truyền vào (mặc định 20)
+app.get('/top-brands', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 20;
+    // 1. Lấy toàn bộ products
+    const productSnapshot = await db.collection('Products').get();
+    console.log(`Retrieved ${productSnapshot.size} products`);
+
+    // 2. Đếm số lượng sản phẩm cho mỗi brand
+    const brandCount = {};
+    productSnapshot.forEach(doc => {
+      const data = doc.data();
+      const brandId = data.brand_id;
+      if (brandId) {
+        brandCount[brandId] = (brandCount[brandId] || 0) + 1;
+      }
+    });
+
+    // 3. Sắp xếp các brand_id theo số lượng giảm dần và lấy top theo giới hạn truyền vào
+    const sortedBrandIds = Object.keys(brandCount)
+      .sort((a, b) => brandCount[b] - brandCount[a])
+      .slice(0, limit);
+
+    // 4. Truy vấn bảng Brands theo sortedBrandIds (sử dụng whereIn với batch)
+    let brands = [];
+    const batchSize = 10;
+    for (let i = 0; i < sortedBrandIds.length; i += batchSize) {
+      const batchIds = sortedBrandIds.slice(i, i + batchSize);
+      const brandSnapshot = await db
+        .collection('Brands')
+        .where(admin.firestore.FieldPath.documentId(), 'in', batchIds)
+        .get();
+
+      brandSnapshot.forEach(doc => {
+        brands.push({
+          id: doc.id,
+          ...doc.data(),
+          productCount: brandCount[doc.id],
+        });
+      });
+    }
+
+    // Sắp xếp lại các brand theo số lượng sản phẩm giảm dần
+    brands.sort((a, b) => b.productCount - a.productCount);
+    console.log("Successfully fetched top brands.");
+    res.json({ topBrands: brands });
+  } catch (error) {
+    console.error("Error retrieving top brands:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Lấy top shops theo giới hạn truyền vào (mặc định 20)
+app.get('/top-shops', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 20;
+    // 1. Lấy toàn bộ products
+    const productSnapshot = await db.collection('Products').get();
+    console.log(`Retrieved ${productSnapshot.size} products`);
+
+    // 2. Đếm số lượng sản phẩm cho mỗi shop
+    const shopCount = {};
+    productSnapshot.forEach(doc => {
+      const data = doc.data();
+      const shop_id = data.shop_id;
+      if (shop_id) {
+        shopCount[shop_id] = (shopCount[shop_id] || 0) + 1;
+      }
+    });
+
+    // 3. Sắp xếp các brand_id theo số lượng giảm dần và lấy top theo giới hạn truyền vào
+    const sortedShopIds = Object.keys(shopCount)
+      .sort((a, b) => shopCount[b] - shopCount[a])
+      .slice(0, limit);
+
+    // 4. Truy vấn bảng Brands theo sortedBrandIds (sử dụng whereIn với batch)
+    let shops = [];
+    const batchSize = 10;
+    for (let i = 0; i < sortedShopIds.length; i += batchSize) {
+      const batchIds = sortedShopIds.slice(i, i + batchSize);
+      const shopSnapshot = await db
+        .collection('Shops')
+        .where(admin.firestore.FieldPath.documentId(), 'in', batchIds)
+        .get();
+
+        shopSnapshot.forEach(doc => {
+          shops.push({
+          id: doc.id,
+          ...doc.data(),
+          productCount: shopCount[doc.id],
+        });
+      });
+    }
+
+    // Sắp xếp lại các shop theo số lượng sản phẩm giảm dần
+    shops.sort((a, b) => b.productCount - a.productCount);
+    console.log("Successfully fetched top shops.");
+    res.json({ topShops: shops });
+  } catch (error) {
+    console.error("Error retrieving top shops:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/products-by-category/:categoryId', async (req, res) => {
   try {
     const categoryId = req.params.categoryId;
@@ -122,6 +227,81 @@ app.get('/products-by-category/:categoryId', async (req, res) => {
   }
 });
 
+app.get('/products-by-brand/:brandId', async (req, res) => {
+  try {
+    const brandId = req.params.brandId;
+    const limit = parseInt(req.query.limit) || 20;
+    const startAfter = req.query.startAfter;
+
+    let query = db.collection('Products')
+      .where('brand_id', '==', brandId)
+      .orderBy('created_at', 'desc')
+      .limit(limit);
+
+    if (startAfter) {
+      // Giả sử startAfter là ISO string, chuyển nó thành Date
+      const startAfterDate = new Date(startAfter);
+      query = query.startAfter(startAfterDate);
+    }
+
+    const snapshot = await query.get();
+
+    // Trả về JSON cho mỗi product: thêm id vào dữ liệu
+    const products = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // Tạo nextPageToken dựa trên trường created_at của document cuối
+    const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+    const nextPageToken = lastDoc 
+      ? lastDoc.data().created_at.toDate().toISOString() 
+      : null;
+
+    res.json({ products, nextPageToken });
+  } catch (error) {
+    console.error('Error fetching products by brand:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/products-by-shop/:shopId', async (req, res) => {
+  try {
+    const shopId = req.params.shopId;
+    const limit = parseInt(req.query.limit) || 20;
+    const startAfter = req.query.startAfter;
+
+    let query = db.collection('Products')
+      .where('shop_id', '==', shopId)
+      .orderBy('created_at', 'desc')
+      .limit(limit);
+
+    if (startAfter) {
+      // Giả sử startAfter là ISO string, chuyển đổi thành Date
+      const startAfterDate = new Date(startAfter);
+      query = query.startAfter(startAfterDate);
+    }
+
+    const snapshot = await query.get();
+
+    // Trả về JSON cho mỗi product: thêm id vào dữ liệu
+    const products = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // Tạo nextPageToken dựa trên trường created_at của document cuối
+    const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+    const nextPageToken = lastDoc
+      ? lastDoc.data().created_at.toDate().toISOString()
+      : null;
+
+    res.json({ products, nextPageToken });
+  } catch (error) {
+    console.error('Error fetching products by shop:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 const port = process.env.PORT || 10000;
 app.listen(port, () => {
